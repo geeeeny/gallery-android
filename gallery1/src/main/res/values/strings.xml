@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Gallery1</string>
+    <string name="previous">{fa-caret-left}</string>
+    <string name="next">{fa-caret-right}</string>
+</resources>

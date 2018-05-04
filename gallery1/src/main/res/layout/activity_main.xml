@@ -23,7 +23,7 @@
         android:gravity="left"
         android:textSize="30dp"
         android:text="@string/previous"
-        android:onClick="onBtnPrevClicked"/>
+        android:onClick="onPrevious"/>
 
     <Button
         android:id="@+id/btn_next"
@@ -34,5 +34,5 @@
         android:gravity="right"
         android:textSize="30dp"
         android:text="@string/next"
-        android:onClick="onBtnNextClicked"/>
+        android:onClick="onNext"/>
 </FrameLayout>

@@ -3,8 +3,10 @@ package edu.iot.gallery1;
 import android.Manifest;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.media.Image;
+import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -16,18 +18,19 @@ import android.widget.Toast;
 
 import com.eqot.fontawesome.FontAwesome;
 
+import java.io.File;
+import java.io.FileFilter;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.security.Permission;
+import java.util.List;
 
 public class MainActivity extends PermissionActivity {
     final static String KEY_INDEX = "index";
 
-    int[] images = {
-            R.drawable.banana,
-            R.drawable.candy,
-            R.drawable.cream,
-            R.drawable.loveme,
-            R.drawable.strawberry
-    };
+    File[] images; //SD카드의 이미지 파일(jpg)들을 저장할 배열
 
     int currentImage = 0; //현재 출력 이미지 인덱스
 
@@ -54,27 +57,29 @@ public class MainActivity extends PermissionActivity {
 
         imageView = (ImageView) findViewById(R.id.imageView);
 
-        FontAwesome.applyToAllViews(this, findViewById(R.id.activity_main));
+        FontAwesome.applyToAllViews(this, findViewById(R.id.activity_main)); //font-awesome 적용하기
 
         if(savedInstanceState != null){ //화면 회전 시 (앱 시작 시 x)
             currentImage = savedInstanceState.getInt(KEY_INDEX, 0);
         }
 
         imageView.setScaleType(scaleType);
+
+        //제스처 이벤트를 위한 제스처 디텍터 준비
         detector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener(){
             @Override
             public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
                 int direction = (int)(e2.getX()-e1.getX());
                 if(direction > 0){
-                    onBtnNextClicked(null);
+                    onNext(null);
                 }else{
-                    onBtnPrevClicked(null);
+                    onPrevious(null);
                 }
                 return true;
             }
 
             @Override
-            public boolean onDoubleTapEvent(MotionEvent e) {
+            public boolean onDoubleTap(MotionEvent e) {
                 if(scaleType==ImageView.ScaleType.CENTER_INSIDE){
                     scaleType = ImageView.ScaleType.CENTER_CROP;
                 }else{
@@ -84,6 +89,7 @@ public class MainActivity extends PermissionActivity {
                 return true;
             }
         });
+
         imageView.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View view, MotionEvent motionEvent) {
@@ -91,34 +97,59 @@ public class MainActivity extends PermissionActivity {
                 return true;
             }
         });
-        changeImage(images[currentImage]);
+
+        //이미지 파일 목록 구성
+        File extFile = Environment.getExternalStorageDirectory(); //SD 카드 폴더의 절대 경로 얻어옴
+        images = extFile.listFiles(new FileFilter() {
+            @Override
+            public boolean accept(File pathname) {
+                String fname = pathname.getName().toLowerCase();
+                return fname.endsWith(".jpg");
+            }
+        });
+
+        setImageView(images[currentImage]);
     }
 
-    //화면 회전 시 동작
+    public void setImageView(File file){
+        //파일로부터 이미지 데이터(byte[]) 읽기
+        byte[] image = new byte[(int) file.length()];
+        try {
+            FileInputStream fileInputStream = new FileInputStream(file);
+            fileInputStream.read(image);
+        } catch (FileNotFoundException e) {
+            System.out.println("File Not Found.");
+            e.printStackTrace();
+        }
+        catch (IOException e1) {
+            System.out.println("Error Reading The File.");
+            e1.printStackTrace();
+        }
+
+        //바이트 배열로부터 비트맵 생성
+        Bitmap bitmap = BitmapFactory.decodeByteArray(image, 0, image.length);
+
+        imageView.setImageBitmap(bitmap);
+    }
+
+    //화면 회전 시 현재 이미지 인덱스 저장
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putInt(KEY_INDEX, currentImage);
     }
 
-    public void onBtnNextClicked(View view) {
+    public void onNext(View view) {
         currentImage = (currentImage + 1) % images.length;
 
-        changeImage(images[currentImage]);
+        setImageView(images[currentImage]);
     }
 
-    public void onBtnPrevClicked(View view) {
+    public void onPrevious(View view) {
         currentImage = currentImage - 1;
         if(currentImage<0) currentImage = images.length-1;
-        Log.d("Current_Image", ":"+currentImage); //태그, 메시지
 
-        changeImage(images[currentImage]);
-    }
-
-    private void changeImage(int imageId) { //자원의 id는 integer 타입
-        Resources res = getResources(); //자원에 접근할 수 있는 Resources 객체 생성. getResources()는 액티비티의 메서드
-        BitmapDrawable bitmap = (BitmapDrawable)res.getDrawable(imageId);
-        imageView.setImageDrawable(bitmap);
+        setImageView(images[currentImage]);
     }
 
     //시스템 back 버튼 클릭
